@@ -1,0 +1,4 @@
+[submodule "GLmol"]
+	path = GLmol
+	url = https://github.com/asford/GLmol.git
+	branch = embedding
