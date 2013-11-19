@@ -1,0 +1,4 @@
+[submodule "ipython_glmol/GLmol"]
+	path = ipython_glmol/GLmol
+	url = https://github.com/asford/GLmol.git
+	branch = embedding
