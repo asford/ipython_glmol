@@ -1,7 +1,8 @@
 from IPython.display import Javascript
 import uuid
 
-from .setup_js import install_ipython_js
+from .setup_js import install_ipython_js, render_js
+import json
 
 glmol_source_library = install_ipython_js()
 
@@ -14,34 +15,33 @@ class PDBEmbed(object):
         self.repr_string = repr_string
 
     def generate_id(self):
-        return "glmod_%i" % uuid.uuid4()
-
-    @classmethod
-    def quote_js_multiline_string(cls, source_string):
-        return "'" + '\' + \'\\n\' + \''.join(l for l in source_string.split("\n") if l) + "'"
+        return "glmol_%i" % uuid.uuid4()
 
     pdb_textarea_template = """
-        <textarea  wrap="off" id="%(embed_id)s_src" style="display:none;">
-        %(pdb_string)s
-        </textarea>
+<textarea  wrap='off' id='%(embed_id)s_src' style='display:none;'>
+%(pdb_string)s
+</textarea>
         """
     
     repr_textarea_template = """
-        <textarea  wrap="off" id="%(embed_id)s_rep" style="display:none;">
-        %(repr_string)s
-        </textarea>
+<textarea  wrap='off' id='%(embed_id)s_rep' style='display:none;'>
+%(repr_string)s
+</textarea>
         """
     
+    data_js_template = """
+        var pdb_textarea_json = %(pdb_textarea_json)s;
+        element.append(pdb_textarea_json);
+
+        var repr_textarea_json = %(repr_textarea_json)s;
+        element.append(repr_textarea_json);
+    """
+
     display_js_template = """
-        element.append('<div id="%(embed_id)s" style="width: auto; height:10in"></div>');
+        element.append('<div id="%(embed_id)s" style="width: auto; height:8in"></div>');
 
         console.log("Created elements.");
         container.show();
-
-
-        element.append(%(pdb_textarea)s);
-        element.append(%(repr_textarea)s);
-
 
         var %(embed_id)s = new GLmol('%(embed_id)s', true);
 
@@ -93,15 +93,68 @@ class PDBEmbed(object):
 
         embed_id = self.generate_id()
 
-        pdb_textarea = self.pdb_textarea_template % dict(embed_id = embed_id, pdb_string = self.pdb_string)
-        repr_textarea = self.repr_textarea_template % dict(embed_id = embed_id, repr_string = self.repr_string)
+        pdb_textarea_json = json.dumps(
+                self.pdb_textarea_template % dict(embed_id = embed_id, pdb_string = self.pdb_string))
 
-        display_js = self.display_js_template % dict(
+        repr_textarea_json = json.dumps(
+                self.repr_textarea_template % dict(embed_id = embed_id, repr_string = self.repr_string))
+
+        display_js = \
+            self.data_js_template % dict(
                 embed_id = embed_id,
-                pdb_textarea = self.quote_js_multiline_string(pdb_textarea),
-                repr_textarea = self.quote_js_multiline_string(repr_textarea))
+                pdb_textarea_json = pdb_textarea_json,
+                repr_textarea_json = repr_textarea_json) + \
+            self.display_js_template % dict(embed_id = embed_id)
+
 
         return Javascript(display_js, lib = glmol_source_library)._repr_javascript_()
+
+    dump_html_template = """
+    <!doctype html>
+    <title></title>
+    <body>
+
+    <script src="http://code.jquery.com/jquery-1.7.2.min.js" type="text/javascript"></script>
+    <script>
+    %(glmol_library)s
+    </script>
+
+    <div id="element"></div>
+
+
+    <script>
+// Setup element and container equiv. to that provided in ipython notebook.
+var element = $("#element")
+var container = element
+
+    %(embed_js)s
+    </script>
+
+    </body>
+    """
+    def dump_html(self):
+        """Create minimal html page for the given representation."""
+
+        embed_id = "glmol"
+
+        pdb_textarea_json = json.dumps(
+                self.pdb_textarea_template % dict(embed_id = embed_id, pdb_string = self.pdb_string))
+
+        repr_textarea_json = json.dumps(
+                self.repr_textarea_template % dict(embed_id = embed_id, repr_string = self.repr_string))
+
+        embed_js = \
+            self.data_js_template % dict(
+                embed_id = embed_id,
+                pdb_textarea_json = pdb_textarea_json,
+                repr_textarea_json = repr_textarea_json) + \
+            self.display_js_template % dict(embed_id = embed_id)
+
+        glmol_library = render_js()
+    
+        return self.dump_html_template % dict(
+                embed_js = embed_js,
+                glmol_library=glmol_library)
 
 test_repr_data = """
 helix:atom 53-82
