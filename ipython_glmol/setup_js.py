@@ -22,7 +22,7 @@ window.GLmol = GLmol;
 """
 
 source_library_names = ["csscolorparser.js", "three.js", "GLmol.js"]
-source_libraries = [path.join(path.dirname(__file__), "..", "GLmol", "src", "js", l) for l in source_library_names]
+source_libraries = [path.join(path.dirname(__file__), "GLmol", "src", "js", l) for l in source_library_names]
 
 def render_js(target_files = source_libraries, js_filter=None):
     """docstring for do_setup"""
