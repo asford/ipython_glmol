@@ -11,13 +11,14 @@ def pose_display(pose):
     sio = StringIO.StringIO()
     pose.dump_pdb(ostream(sio))
     pdb_string = sio.getvalue()
+
+    ss_string = pose.secstruct()
     
-    # Missing pose secondary structure assignment
-    if not re.search("[^L]", pose.secstruct()):
-        dssp = rosetta.core.scoring.dssp.Dssp(pose)
-        dssp.insert_ss_into_pose(pose)
-    
-    ss_map = [(pose.secstruct(i), pose.pdb_info().number(i)) for i in xrange(1, pose.n_residue() + 1)]
+    # Missing pose secondary structure assignment, recalculate
+    if not re.search("[^L]", ss_string):
+        ss_string = rosetta.core.scoring.dssp.Dssp(pose).get_dssp_secstruct()
+
+    ss_map = [(ss_string[i-1], pose.pdb_info().number(i)) for i in xrange(1, pose.n_residue() + 1)]
     helix_res = [r for (s, r) in ss_map if s == "H"]
     sheet_res = [r for (s, r) in ss_map if s == "E"]
     
