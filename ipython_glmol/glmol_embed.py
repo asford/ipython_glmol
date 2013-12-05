@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from IPython.display import Javascript
 import uuid
 
@@ -9,10 +11,23 @@ glmol_source_library = install_ipython_js()
 class PDBEmbed(object):
     """Embeds pdb and repr as GLmol canvas."""
 
-    def __init__(self, pdb_string, repr_string):
+    def __init__(self, pdb_string, **repr_entries):
         """Init from given pdb and repr."""
         self.pdb_string = pdb_string
-        self.repr_string = repr_string
+        self.repr_entries = defaultdict(list)
+
+        if repr_entries:
+            for repr_type, selection in repr_entries.items():
+                if isinstance(selection, basestring):
+                    self.repr_entries[repr_type].append(selection)
+                else:
+                    self.repr_entries[repr_type].extend(selection)
+
+
+    @property
+    def repr_string(self):
+        repr_lines = ["%s:%s" % (repr_type, selection) for repr_type in self.repr_entries for selection in self.repr_entries[repr_type]]
+        return "\n".join(repr_lines)
 
     def generate_id(self):
         return "glmol_%i" % uuid.uuid4()
@@ -156,12 +171,7 @@ var container = element
                 embed_js = embed_js,
                 glmol_library=glmol_library)
 
-test_repr_data = """
-helix:atom 53-82
-ribbon:atom 1-82
-line:atom 1-82
-bgcolor:000000
-"""
+test_repr_data = dict( helix = "atom 53-82", ribbon = "all", line = "all; heavy", bgcolor = "000000" )
 
 test_pdb_data = """
 ATOM      1  N   GLY A   2      35.259  38.537  16.817  1.00 30.55           N  

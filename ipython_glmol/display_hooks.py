@@ -1,6 +1,16 @@
 import sys
 from .glmol_embed import PDBEmbed
 
+import urllib2
+import tempfile
+
+def pdb_display(pdb_id):
+    """Download and embed pdb."""
+    d = urllib2.urlopen("http://www.pdb.org/pdb/files/%s.pdb"% pdb_id)
+    pdb_lines = [l for l in d.readlines() if l.startswith(("ATOM", "TER", "HELIX", "SHEET"))]
+
+    return PDBEmbed("\n".join(pdb_lines), "")
+
 def pose_display(pose):
     """Setup embed display for rosetta.core.pose object with sensible default representation."""
     import re
@@ -22,17 +32,11 @@ def pose_display(pose):
     helix_res = [r for (s, r) in ss_map if s == "H"]
     sheet_res = [r for (s, r) in ss_map if s == "E"]
     
-    repr_lines = []
-    repr_lines.append("ribbon: residue %s-%s" % (pose.pdb_info().number(1), pose.pdb_info().number(pose.n_residue())))
-    repr_lines.append("line: residue %s-%s" % (pose.pdb_info().number(1), pose.pdb_info().number(pose.n_residue())))
-
-    if helix_res:
-        repr_lines.append("helix: residue %s" % ",".join(str(r) for r in helix_res))
-    if sheet_res:
-        repr_lines.append("sheet: residue %s" % ",".join(str(r) for r in sheet_res))
-    
-    return PDBEmbed(pdb_string, "\n".join(repr_lines))
-
+    return PDBEmbed(
+            pdb_string,
+            ribbon= "all",
+            helix = "residue %s" % ",".join(str(r) for r in helix_res),
+            sheet = "residue %s" % ",".join(str(r) for r in sheet_res))
 
 def setup_display_hooks():
     """Setup display hooks for all currently loaded modules."""
