@@ -20,9 +20,8 @@ class PDBEmbed(object):
             for repr_type, selection in repr_entries.items():
                 if isinstance(selection, basestring):
                     self.repr_entries[repr_type].append(selection)
-                else:
+                elif selection:
                     self.repr_entries[repr_type].extend(selection)
-
 
     @property
     def repr_string(self):
@@ -73,7 +72,6 @@ class PDBEmbed(object):
               this.parseRep(this.modelGroup, $('#%(embed_id)s_rep').val());
 
               this.drawAtomsAsSphere(this.modelGroup, hetatm, this.sphereRadius);
-              this.drawCartoon(this.modelGroup, all, this.curveWidth);
           }
 
         %(embed_id)s.rebuildScene = function (repressDraw)
