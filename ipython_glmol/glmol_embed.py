@@ -82,8 +82,6 @@ class PDBEmbed(object):
               this.defineRepresentation();
 
               console.log("Built scene in " + (new Date() - time) + "ms");
-
-              this.zoomInto(this.getAllAtoms())
               
               if (repressDraw)
               {
