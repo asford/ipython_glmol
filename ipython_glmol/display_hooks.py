@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger("ipython_glmol.display_hooks")
+
 import sys
 from .glmol_embed import PDBEmbed
 
@@ -36,6 +39,8 @@ def pose_display(pose, **repr_entries):
     import cStringIO as StringIO
     from rosetta.utility import ostream
     import rosetta.core.scoring.dssp
+
+    logger.debug("pose_display\n%s\nrepr_entries\n%r", pose, repr_entries)
     
     sio = StringIO.StringIO()
     pose.dump_pdb(ostream(sio))
@@ -45,14 +50,20 @@ def pose_display(pose, **repr_entries):
     
     # Missing pose secondary structure assignment, recalculate
     if not re.search("[^L]", ss_string):
+        logger.debug("Performing DSSP.")
         ss_string = rosetta.core.scoring.dssp.Dssp(pose).get_dssp_secstruct()
+
+    logger.debug("ss_string: %s", ss_string)
 
     ss_spans = extract_character_spans(ss_string)
 
     sheet_spans = []
     helix_spans = []
     for s, start, end in ss_spans:
-        residue_span = "%s-%s" % (pose.pdb_info().number(start), pose.pdb_info().number(end))
+
+        residue_span = "%s-%s" % (pose.pdb_info().number(start+1), pose.pdb_info().number(end)+1)
+
+        logger.debug("ss span: %s residue_span: %s", (s, start, end), residue_span)
 
         if s == "H":
             helix_spans.append(residue_span)
