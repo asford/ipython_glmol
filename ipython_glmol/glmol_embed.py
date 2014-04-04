@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, Iterable
 
 from IPython.display import Javascript
 import uuid
@@ -113,10 +113,20 @@ class PDBEmbed(object):
                 self.add_repr_entry(repr_type, selection)
 
     def __add__(self, modifier):
-        assert isinstance(modifier, EmbedReprModifier)
-
-        modifier.apply_to_embed(self)
+        ## TODO should implement correct shallow-copy semantics for embed object to suppoort
+        # immutable add
+        if isinstance(modifier, EmbedReprModifier):
+            modifier.apply_to_embed(self)
+        elif isinstance(modifier, Iterable):
+            for m in modifier:
+                m.apply_to_embed(self)
+        else:
+            raise ValueError("Invalid PDBEmbed modifier: %s", modifier)
+        
         return self
+
+    def __iadd__(self, modifier):
+        return self.__add__(modifier)
 
     def add_repr_entry(self, repr_type, selection):
         if isinstance(selection, basestring):
