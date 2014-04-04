@@ -97,7 +97,9 @@ _display_js_template = """
         %(embed_id)s.defineRepresentation = parseAndDefineRepresentation;
         %(embed_id)s.loadMolecule(true);
 
-        $.data(element.children()[0], "glmol", %(embed_id)s)
+        $.data(element.children()[0], "glmol", %(embed_id)s);
+        document.getElementById("%(embed_id)s").scrollIntoViewIfNeeded();
+        
         """
     
 class PDBEmbed(object):
