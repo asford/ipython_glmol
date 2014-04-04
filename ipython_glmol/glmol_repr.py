@@ -1,5 +1,14 @@
 from .glmol_embed import EmbedReprModifier
 
+class Clear(EmbedReprModifier):
+    clear_types = ("ribbon", "stick", "line", "sphere")
+    def __init__(self):
+        pass
+
+    def apply_to_embed(self, embed):
+        for t in self.clear_types:
+            embed.repr_entries[t] = []
+
 class SimpleReprModifier(EmbedReprModifier):
     def __init__(self, repr_type, selector="all"):
         self.repr_type = repr_type
@@ -26,6 +35,15 @@ class Line(SimpleReprModifier):
 class Sphere(SimpleReprModifier):
     def __init__(self, selector = "all"):
         SimpleReprModifier.__init__(self, "sphere", selector)
+
+class Color(EmbedReprModifier):
+    def __init__(self, color, selector = "all"):
+        self.color = color
+        self.selector = selector
+
+    def apply_to_embed(self, embed):
+        color_selector = "%s:%s" % (self.color, self.selector)
+        embed.add_repr_entry("color", color_selector)
 
 class ResidueSpectrum(EmbedReprModifier):
     def __init__(self, colors, per_residue_scores, sub_selector = None, thresholds = None):
@@ -56,3 +74,11 @@ class ResidueSpectrum(EmbedReprModifier):
             color_selector = ["%s; %s" % (c, self.sub_selector) for c in color_selector]
 
         embed.add_repr_entry("color", color_selector)
+
+class Sheet(SimpleReprModifier):
+    def __init__(self, selector):
+        SimpleReprModifier.__init__(self, "sheet", selector)
+
+class Helix(SimpleReprModifier):
+    def __init__(self, selector):
+        SimpleReprModifier.__init__(self, "helix", selector)
