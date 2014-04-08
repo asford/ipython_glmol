@@ -105,14 +105,12 @@ _display_js_template = """
 class PDBEmbed(object):
     """Embeds pdb and repr as GLmol canvas."""
 
-    def __init__(self, pdb_string, **repr_entries):
-        """Init from given pdb and repr."""
+    def __init__(self, pdb_string, residue_properties = defaultdict(lambda: defaultdict(lambda: 0))):
+        """Init from given pdb and residue properties."""
         self.pdb_string = pdb_string
         self.repr_entries = defaultdict(list)
-
-        if repr_entries:
-            for repr_type, selection in repr_entries.items():
-                self.add_repr_entry(repr_type, selection)
+        self.residue_properties = defaultdict(lambda: defaultdict(lambda: 0))
+        self.residue_properties.update( residue_properties )
 
     def __add__(self, modifier):
         ## TODO should implement correct shallow-copy semantics for embed object to suppoort

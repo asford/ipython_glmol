@@ -36,6 +36,13 @@ class Sphere(SimpleReprModifier):
     def __init__(self, selector = "all"):
         SimpleReprModifier.__init__(self, "sphere", selector)
 
+class BackgroundColor(EmbedReprModifier):
+    def __init__(self, color):
+        self.color = color
+
+    def apply_to_embed(self, embed):
+        embed.add_repr_entry("bgcolor", self.color)
+
 class Color(EmbedReprModifier):
     def __init__(self, color, selector = "all"):
         self.color = color
@@ -46,10 +53,9 @@ class Color(EmbedReprModifier):
         embed.add_repr_entry("color", color_selector)
 
 class ResidueSpectrum(EmbedReprModifier):
-    def __init__(self, colors, per_residue_scores, sub_selector = None, thresholds = None):
+    def __init__(self, residue_property, colors = None, sub_selector = None, thresholds = None):
+        self.residue_property = residue_property
         self.colors = colors
-        self.per_residue_scores = per_residue_scores
-
         self.sub_selector = sub_selector
 
         if thresholds:
@@ -57,9 +63,16 @@ class ResidueSpectrum(EmbedReprModifier):
         self.thresholds = thresholds
 
     def apply_to_embed(self, embed):
+        import matplotlib.cm
         import matplotlib.colors
-        
-        cmap = matplotlib.colors.LinearSegmentedColormap.from_list("residue_spectrum", self.colors)
+        from matplotlib.colors import rgb2hex
+
+        if isinstance( self.colors, matplotlib.colors.Colormap ):
+            cmap = self.colors
+        elif isinstance( self.colors, basestring ) or self.colors is None:
+            cmap = matplotlib.cm.get_cmap(self.colors)
+        else:
+            cmap = matplotlib.colors.LinearSegmentedColormap.from_list("residue_spectrum", self.colors)
 
         if self.thresholds:
             vmin, vmax = self.thresholds
@@ -67,8 +80,12 @@ class ResidueSpectrum(EmbedReprModifier):
         else:
             sm = matplotlib.cm.ScalarMappable(matplotlib.colors.Normalize(), cmap=cmap)
 
-        color_entries = [matplotlib.colors.rgb2hex(c) for c in sm.to_rgba(self.per_residue_scores)]
-        color_selector = ["%s:residue %i" %(c, i + 1) for i, c in enumerate(color_entries)]
+        if not self.residue_property in embed.residue_properties:
+            raise ValueError("Unable to load residue property: %s Available properties: %s" % (self.residue_property, embed.residue_properties.keys()))
+
+        color_entries = map(rgb2hex, sm.to_rgba(embed.residue_properties[self.residue_property].values()))
+        
+        color_selector = ["%s:residue %i" %(color_entry, residue_id) for residue_id, color_entry in zip( embed.residue_properties[self.residue_property].keys(), color_entries )]
 
         if self.sub_selector:
             color_selector = ["%s; %s" % (c, self.sub_selector) for c in color_selector]
