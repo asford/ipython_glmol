@@ -6,6 +6,7 @@ import numpy
 
 from .glmol_embed import PDBEmbed
 from .glmol_repr import Ribbon, Helix, Sheet
+from .glmol_selectors import ResidueNumber
 
 import urllib2
 import tempfile
@@ -48,15 +49,13 @@ def pose_display(pose, **repr_entries):
     pose.dump_pdb(ostream(sio))
     pdb_string = sio.getvalue()
 
-    residue_ids = [pose.pdb_info().number(i + 1) for i in xrange(pose.n_residue())]
-
     residue_properties = {}
-    residue_properties["residue_number"] = dict((residue_id, i) for i, residue_id in enumerate(residue_ids))
+    residue_properties["residue_number"] = range(pose.n_residue())
 
     if pose.energies().energies_updated() and hasattr( pose.energies(), "residue_total_energies_array"):
         residue_energies = pose.energies().residue_total_energies_array()
         for n in residue_energies.dtype.names:
-            residue_properties[n] = dict((residue_id, residue_energies[i][n]) for i, residue_id in enumerate(residue_ids))
+            residue_properties[n] = list(residue_energies[n])
 
     embed = PDBEmbed(pdb_string, residue_properties)
 
@@ -66,44 +65,26 @@ def pose_display(pose, **repr_entries):
         logger.debug("Performing DSSP.")
         ss_string = rosetta.core.scoring.dssp.Dssp(pose).get_dssp_secstruct()
 
-    embed += ss_repr_entries( ss_string, residue_ids )
+    embed += ss_repr_entries( ss_string )
 
     if default_pose_repr:
         embed += default_pose_repr
 
     return embed
 
-def ss_repr_entries(ss_sequence, residue_ids):
+def ss_repr_entries(ss_sequence):
     """Generate repr objects for the given secondary structure sequence."""
 
     logger.debug("ss_sequence: %s", ss_sequence)
 
     ss_spans = extract_character_spans(ss_sequence)
 
-    sheet_spans = []
-    helix_spans = []
-    for s, start, end in ss_spans:
-        span_residue_ids = residue_ids[start:end]
-
-        if numpy.all(span_residue_ids[:-1] < span_residue_ids[1:]):
-            residue_span = "%s-%s" % (span_residue_ids[0], span_residue_ids[-1])
-        else:
-            residue_span = ",".join(str(i) for i in span_residue_ids)
-
-        logger.debug("ss span: %s residue_span: %s", (s, start, end), residue_span)
-
-        if s == "H":
-            helix_spans.append(residue_span)
-        elif s == "E":
-            sheet_spans.append(residue_span)
-
     repr_entries = []
-
-    if sheet_spans:
-        repr_entries.append( Sheet("residue %s" % ",".join(r for r in sheet_spans)) )
-
-    if helix_spans:
-        repr_entries.append( Helix("residue %s" % ",".join(r for r in helix_spans)) )
+    for s, start, end in ss_spans:
+        if s == "H":
+            repr_entries.append( Helix(ResidueNumber[start:end]) )
+        elif s == "E":
+            repr_entries.append( Sheet(ResidueNumber[start:end]) )
 
     return repr_entries
 

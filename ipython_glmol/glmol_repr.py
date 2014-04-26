@@ -1,4 +1,7 @@
+from abc import abstractproperty, ABCMeta
+
 from .glmol_embed import EmbedReprModifier
+from .glmol_selectors import GLMolSelector, GLMolSubSelector, All, ResidueNumber
 
 class Clear(EmbedReprModifier):
     clear_types = ("ribbon", "stick", "line", "sphere")
@@ -10,31 +13,43 @@ class Clear(EmbedReprModifier):
             embed.repr_entries[t] = []
 
 class SimpleReprModifier(EmbedReprModifier):
-    def __init__(self, repr_type, selector="all"):
-        self.repr_type = repr_type
-        self.selector = selector
+    def __init__(self, selector = All() ):
+        if selector is not None:
+            assert isinstance(selector, (GLMolSelector, GLMolSubSelector))
+            self.selector = selector if isinstance(selector, GLMolSelector) else All() + selector
+        else:
+            self.selector = selector
 
     def apply_to_embed(self, embed):
-        if not self.selector:
+        if self.selector is None:
             embed.repr_entries[self.repr_type] = []
         else:
-            embed.add_repr_entry(self.repr_type, self.selector)
+            embed.add_repr_entry(self.repr_type, self.selector.glmol_selection_string)
+
+    @property
+    def repr_type(self):
+        return str.lower(self.__class__.__name__)
+
+    def __repr__(self):
+        return "%s(selector = %r)" % (self.__class__.__name__, self.selector)
 
 class Ribbon(SimpleReprModifier):
-    def __init__(self, selector = "all"):
-        SimpleReprModifier.__init__(self, "ribbon", selector)
+    pass
 
 class Stick(SimpleReprModifier):
-    def __init__(self, selector = "all"):
-        SimpleReprModifier.__init__(self, "stick", selector)
+    pass
 
 class Line(SimpleReprModifier):
-    def __init__(self, selector = "all"):
-        SimpleReprModifier.__init__(self, "line", selector)
+    pass
 
 class Sphere(SimpleReprModifier):
-    def __init__(self, selector = "all"):
-        SimpleReprModifier.__init__(self, "sphere", selector)
+    pass
+
+class Sheet(SimpleReprModifier):
+    pass
+
+class Helix(SimpleReprModifier):
+    pass
 
 class BackgroundColor(EmbedReprModifier):
     def __init__(self, color):
@@ -44,18 +59,22 @@ class BackgroundColor(EmbedReprModifier):
         embed.add_repr_entry("bgcolor", self.color)
 
 class Color(EmbedReprModifier):
-    def __init__(self, color, selector = "all"):
+    def __init__(self, color, selector = All()):
         self.color = color
-        self.selector = selector
+
+        assert isinstance(selector, (GLMolSelector, GLMolSubSelector))
+        self.selector = selector if isinstance(selector, GLMolSelector) else All() + selector
 
     def apply_to_embed(self, embed):
-        color_selector = "%s:%s" % (self.color, self.selector)
+        color_selector = "%s:%s" % (self.color, self.selector.glmol_selection_string)
         embed.add_repr_entry("color", color_selector)
 
 class ResidueSpectrum(EmbedReprModifier):
     def __init__(self, residue_property, colors = None, sub_selector = None, thresholds = None):
         self.residue_property = residue_property
         self.colors = colors
+        
+        assert sub_selector is None or isinstance(sub_selector, GLMolSubSelector)
         self.sub_selector = sub_selector
 
         if thresholds:
@@ -83,19 +102,11 @@ class ResidueSpectrum(EmbedReprModifier):
         if not self.residue_property in embed.residue_properties:
             raise ValueError("Unable to load residue property: %s Available properties: %s" % (self.residue_property, embed.residue_properties.keys()))
 
-        color_entries = map(rgb2hex, sm.to_rgba(embed.residue_properties[self.residue_property].values()))
-        
-        color_selector = ["%s:residue %i" %(color_entry, residue_id) for residue_id, color_entry in zip( embed.residue_properties[self.residue_property].keys(), color_entries )]
+        color_entries = map(rgb2hex, sm.to_rgba(embed.residue_properties[self.residue_property]))
 
+        selectors = [ResidueNumber[i] for i in range(len(color_entries))]
         if self.sub_selector:
-            color_selector = ["%s; %s" % (c, self.sub_selector) for c in color_selector]
+            selectors = [s + self.sub_selector for s in selectors]
 
-        embed.add_repr_entry("color", color_selector)
-
-class Sheet(SimpleReprModifier):
-    def __init__(self, selector):
-        SimpleReprModifier.__init__(self, "sheet", selector)
-
-class Helix(SimpleReprModifier):
-    def __init__(self, selector):
-        SimpleReprModifier.__init__(self, "helix", selector)
+        embed.add_repr_entry("color",
+                ["%s:%s" % (c, s.glmol_selection_string) for c, s in zip(color_entries, selectors) ])
