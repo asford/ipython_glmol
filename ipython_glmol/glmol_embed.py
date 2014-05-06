@@ -1,5 +1,6 @@
 from collections import defaultdict, Iterable
 
+import IPython
 from IPython.display import Javascript
 import uuid
 
@@ -7,6 +8,9 @@ from .setup_js import install_ipython_js, render_js
 import json
 
 glmol_source_library = install_ipython_js()
+
+if IPython.version_info[0] >= 2:
+    glmol_source_library = "/" + glmol_source_library
 
 _repr_textarea_template = """
 <textarea  wrap='off' id='%(embed_id)s_rep' style='display:none;'>
@@ -160,7 +164,6 @@ class PDBEmbed(object):
                 pdb_textarea_json = pdb_textarea_json,
                 repr_textarea_json = repr_textarea_json) + \
             _display_js_template % dict(embed_id = embed_id)
-
 
         return Javascript(display_js, lib = glmol_source_library)._repr_javascript_()
 

@@ -7,4 +7,7 @@ setup(name='ipython_glmol',
     author_email='a.sewall.ford@gmail.com',
     packages=['ipython_glmol'],
     package_data={'ipython_glmol' : ["GLmol/src/js/*"]}
+    install_requires = [
+        "ipython>=1.2.0",
+    ]
 )
